@@ -9571,6 +9571,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "smallvec",
  "swc_core",
  "turbo-tasks",
  "turbo-tasks-build",
