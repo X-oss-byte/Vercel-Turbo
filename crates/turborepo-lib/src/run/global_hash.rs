@@ -55,6 +55,7 @@ pub fn get_global_hash_inputs<'a, L: ?Sized + Lockfile>(
     env_mode: EnvMode,
     framework_inference: bool,
     dot_env: &'a [RelativeUnixPathBuf],
+    hasher: &SCM,
 ) -> Result<GlobalHashableInputs<'a>> {
     let global_hashable_env_vars =
         get_global_hashable_env_vars(env_at_execution_start, global_env)?;
@@ -97,8 +98,6 @@ pub fn get_global_hash_inputs<'a, L: ?Sized + Lockfile>(
             global_deps.insert(lockfile_path);
         }
     }
-
-    let hasher = SCM::new(root_path);
 
     let global_deps_paths = global_deps
         .iter()
