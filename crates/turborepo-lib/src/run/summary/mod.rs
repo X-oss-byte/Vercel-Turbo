@@ -15,6 +15,7 @@ use svix_ksuid::{Ksuid, KsuidLike};
 use tabwriter::TabWriter;
 use thiserror::Error;
 use turbopath::{AbsoluteSystemPath, AbsoluteSystemPathBuf, AnchoredSystemPath};
+use turborepo_api_client::APIClient;
 use turborepo_ci::Vendor;
 use turborepo_env::EnvironmentVariableMap;
 use turborepo_ui::{color, cprintln, cwriteln, BOLD, BOLD_CYAN, GREY, UI};
@@ -23,7 +24,9 @@ use crate::{
     cli::EnvMode,
     opts::RunOpts,
     package_graph::{PackageGraph, WorkspaceName},
-    run::summary::{execution::ExecutionSummary, scm::SCMState, task::TaskSummary},
+    run::summary::{
+        execution::ExecutionSummary, scm::SCMState, spaces::SpacesClient, task::TaskSummary,
+    },
 };
 
 #[derive(Debug, Error)]
@@ -94,6 +97,7 @@ impl<'a> RunSummary<'a> {
         repo_root: &'a AbsoluteSystemPath,
         package_inference_root: Option<&'a AnchoredSystemPath>,
         turbo_version: &'static str,
+        spaces_client: &'a APIClient,
         run_opts: &RunOpts,
         packages: HashSet<WorkspaceName>,
         env_at_execution_start: EnvironmentVariableMap,
@@ -117,6 +121,12 @@ impl<'a> RunSummary<'a> {
             synthesized_command.clone(),
             package_inference_root,
             start_at,
+        );
+
+        let spaces_client = SpacesClient::new(
+            run_opts.experimental_space_id.as_deref(),
+            spaces_client,
+            api_auth,
         );
 
         RunSummary {

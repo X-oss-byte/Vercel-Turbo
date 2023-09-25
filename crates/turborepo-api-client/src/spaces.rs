@@ -31,7 +31,7 @@ struct SpacesClientSummary {
     version: String,
 }
 
-struct SpacesRun {
+pub struct SpacesRun {
     id: String,
     url: String,
 }

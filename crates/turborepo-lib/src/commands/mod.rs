@@ -3,7 +3,7 @@ use std::{borrow::Borrow, cell::OnceCell};
 use anyhow::Result;
 use sha2::{Digest, Sha256};
 use turbopath::{AbsoluteSystemPath, AbsoluteSystemPathBuf};
-use turborepo_api_client::APIClient;
+use turborepo_api_client::{APIAuth, APIClient};
 use turborepo_ui::UI;
 
 use crate::{
@@ -107,6 +107,20 @@ impl CommandBase {
         Ok(self.client_config.get_mut().unwrap())
     }
 
+    pub fn api_auth(&self) -> Result<Option<APIAuth>, ConfigError> {
+        let repo_config = self.base.repo_config()?;
+        let team_id = repo_config.team_id();
+        let team_slug = repo_config.team_slug();
+
+        let token = self.base.user_config()?.token();
+
+        team_id.zip(token).map(|(team_id, token)| APIAuth {
+            team_id: team_id.to_string(),
+            token: token.to_string(),
+            team_slug: team_slug.map(|s| s.to_string()),
+        })
+    }
+
     pub fn args(&self) -> &Args {
         &self.args
     }
@@ -114,6 +128,7 @@ impl CommandBase {
     pub fn api_client(&self) -> Result<APIClient> {
         let repo_config = self.repo_config()?;
         let client_config = self.client_config()?;
+        let api_auth = self.api_auth()?;
         let args = self.args();
 
         let api_url = repo_config.api_url();
@@ -123,6 +138,7 @@ impl CommandBase {
             timeout,
             self.version,
             args.preflight,
+            api_auth,
         )?)
     }
 

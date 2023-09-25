@@ -1,17 +1,27 @@
-use turborepo_api_client::{spaces::SpacesRunPayload, APIAuth, APIClient};
+use turborepo_api_client::{
+    spaces::{SpacesRun, SpacesRunPayload},
+    APIAuth, APIClient,
+};
 
-struct SpacesClient {
-    space_id: String,
-    api_client: APIClient,
+use crate::run::summary::Error;
+
+pub struct SpacesClient<'a> {
+    space_id: &'a str,
+    api_client: &'a APIClient,
     api_auth: APIAuth,
 }
 
-impl SpacesClient {
+enum SpacesRequest {
+    Start { payload: SpacesRunPayload },
+}
+
+impl<'a> SpacesClient<'a> {
     pub fn new(
-        space_id: Option<String>,
-        api_client: APIClient,
+        space_id: Option<&'a str>,
+        api_client: &'a APIClient,
         api_auth: Option<APIAuth>,
     ) -> Option<Self> {
+        // If space_id is empty, we don't build a client
         let space_id = space_id?;
         let Some(api_auth) = api_auth else {
             eprintln!(
@@ -29,8 +39,9 @@ impl SpacesClient {
     }
 
     async fn create_run(&self, payload: SpacesRunPayload) -> Result<SpacesRun, Error> {
-        let handle = tokio::spawn(self.api_client.create_spaces_run(&self.space_id, payload));
-
-        Ok(handle)
+        Ok(self
+            .api_client
+            .create_spaces_run(&self.space_id, payload)
+            .await?)
     }
 }
