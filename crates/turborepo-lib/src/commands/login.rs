@@ -92,6 +92,44 @@ fn make_token_name() -> Result<String> {
 }
 
 pub async fn login(base: &mut CommandBase) -> Result<()> {
+    // If we've already had the user log in, check to see if
+    // the token we found is still valid.
+    //
+    // If the token we found is not valid, go through the process to get
+    // a new token issued.
+    let user_config = base.user_config()?;
+    if let Some(token) = user_config.token() {
+        // Try to fetch the user with the token we found to see if we get a good
+        // response back.
+        match base.api_client()?.get_user(token).await {
+            Ok(response) => {
+                let ui = &base.ui;
+                // TODO(voz): What do we tell the user here?
+                println!(
+                    "
+{} Existing Turborepo token found for {}
+
+{}
+
+{}
+
+",
+                    ui.rainbow(">>> Success!"),
+                    response.user.email,
+                    // TODO(voz): Can we get rid of these two ui.apply? Should figure out how to
+                    // interrogate tokens more to see if it contains info about if the token is
+                    // connected already.
+                    ui.apply(CYAN.apply_to(
+                        "To connect to your Remote Cache, run the following in any turborepo:"
+                    )),
+                    ui.apply(BOLD.apply_to("  npx turbo link"))
+                );
+                return Ok(());
+            }
+            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
+        };
+    }
+
     let repo_config = base.repo_config()?;
     let redirect_url = format!("http://{DEFAULT_HOST_NAME}:{DEFAULT_PORT}");
     let login_url_configuration = repo_config.login_url();

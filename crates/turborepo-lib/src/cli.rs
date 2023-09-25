@@ -319,7 +319,7 @@ pub enum Command {
         #[clap(long = "sso-team")]
         sso_team: Option<String>,
     },
-    /// Logout to your Vercel account
+    /// Logout of your Vercel account
     Logout {},
     /// Prepare a subset of your monorepo.
     Prune {
