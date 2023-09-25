@@ -23,6 +23,7 @@ rustc_version_runtime = "0.2.1"
 serde = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+turbopath = { workspace = true }
 turborepo-ci = { workspace = true }
 turborepo-vercel-api = { workspace = true }
 url = { workspace = true }

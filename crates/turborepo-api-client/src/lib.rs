@@ -19,7 +19,7 @@ pub use crate::error::{Error, Result};
 
 mod error;
 mod retry;
-mod spaces;
+pub mod spaces;
 
 lazy_static! {
     static ref AUTHORIZATION_REGEX: Regex =

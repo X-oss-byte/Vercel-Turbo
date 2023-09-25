@@ -9943,6 +9943,7 @@ dependencies = [
  "serde",
  "thiserror",
  "tokio",
+ "turbopath",
  "turborepo-ci",
  "turborepo-vercel-api",
  "turborepo-vercel-api-mock",

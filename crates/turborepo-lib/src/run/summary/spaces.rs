@@ -1,46 +1,9 @@
-use chrono::{DateTime, Local};
-use serde::Serialize;
-use turbopath::AbsoluteSystemPathBuf;
-use turborepo_api_client::{APIAuth, APIClient};
+use turborepo_api_client::{spaces::SpacesRunPayload, APIAuth, APIClient};
 
 struct SpacesClient {
     space_id: String,
     api_client: APIClient,
     api_auth: APIAuth,
-}
-
-#[derive(Serialize)]
-struct SpacesClientSummary {
-    id: String,
-    name: String,
-    version: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "lowercase")]
-enum RunStatus {
-    Running,
-    Completed,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SpacesRunPayload {
-    start_time: DateTime<Local>,
-    end_time: DateTime<Local>,
-    status: RunStatus,
-    #[serde(rename = "type")]
-    ty: &'static str, // Hardcoded to "TURBO"
-    exit_code: u32,
-    command: String,
-    repository_path: AbsoluteSystemPathBuf,
-    #[serde(rename = "context")]
-    run_context: String,
-    client: SpacesClientSummary,
-    git_branch: String,
-    git_sha: String,
-    #[serde(rename = "originationUser")]
-    user: String,
 }
 
 impl SpacesClient {
@@ -65,7 +28,9 @@ impl SpacesClient {
         })
     }
 
-    async fn create_run(_payload: SpacesRunPayload) {
-        todo!()
+    async fn create_run(&self, payload: SpacesRunPayload) -> Result<SpacesRun, Error> {
+        let handle = tokio::spawn(self.api_client.create_spaces_run(&self.space_id, payload));
+
+        Ok(handle)
     }
 }
