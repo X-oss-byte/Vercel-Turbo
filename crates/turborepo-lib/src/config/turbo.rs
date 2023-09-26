@@ -428,7 +428,7 @@ impl TurboJson {
                         });
                     }
 
-                    pipeline.insert(task_name.into_root_task(), task_definition);
+                    pipeline.insert(task_name, task_definition);
                 }
 
                 turbo_from_files.pipeline = pipeline;
