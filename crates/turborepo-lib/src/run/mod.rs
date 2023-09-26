@@ -37,6 +37,7 @@ use crate::{
     run::{
         global_hash::get_global_hash_inputs,
         summary::{GlobalHashSummary, RunSummary},
+        task_id::ROOT_PKG_NAME,
     },
     task_graph::Visitor,
     task_hash::{PackageInputsHashes, TaskHashTrackerState},
@@ -121,7 +122,10 @@ impl<'a> Run<'a> {
 
             if filtered_pkgs.len() != pkg_dep_graph.len() {
                 for target in self.targets() {
-                    let task_name = TaskName::from(target.as_str());
+                    let task_name = TaskName {
+                        package: Some(ROOT_PKG_NAME.into()),
+                        task: target.into(),
+                    };
                     if root_turbo_json.pipeline.contains_key(&task_name) {
                         filtered_pkgs.insert(WorkspaceName::Root);
                         break;
@@ -364,8 +368,29 @@ impl<'a> Run<'a> {
 
         let scm = SCM::new(&self.base.repo_root);
 
-        let filtered_pkgs =
-            scope::resolve_packages(&opts.scope_opts, &self.base.repo_root, &pkg_dep_graph, &scm)?;
+        let filtered_pkgs = {
+            let mut filtered_pkgs = scope::resolve_packages(
+                &opts.scope_opts,
+                &self.base.repo_root,
+                &pkg_dep_graph,
+                &scm,
+            )?;
+
+            if filtered_pkgs.len() != pkg_dep_graph.len() {
+                for target in self.targets() {
+                    let task_name = TaskName {
+                        package: Some(ROOT_PKG_NAME.into()),
+                        task: target.into(),
+                    };
+                    if root_turbo_json.pipeline.contains_key(&task_name) {
+                        filtered_pkgs.insert(WorkspaceName::Root);
+                        break;
+                    }
+                }
+            }
+
+            filtered_pkgs
+        };
 
         let global_hash = global_hash_inputs.calculate_global_hash_from_inputs();
 
