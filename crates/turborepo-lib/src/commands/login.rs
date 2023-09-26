@@ -58,26 +58,7 @@ pub async fn sso_login(base: &mut CommandBase, sso_team: &str) -> Result<()> {
     base.user_config_mut()?
         .set_token(Some(verified_user.token.clone()))?;
 
-    println!(
-        "
-{} {}
-",
-        base.ui.rainbow(">>> Success!"),
-        base.ui.apply(BOLD.apply_to(format!(
-            "Turborepo CLI authorized for {}",
-            user_response.user.email
-        )))
-    );
-
-    println!(
-        "{}
-{}
-",
-        base.ui.apply(
-            CYAN.apply_to("To connect to your Remote Cache, run the following in any turborepo:")
-        ),
-        base.ui.apply(BOLD.apply_to("`npx turbo link`"))
-    );
+    print_cli_authorized(&user_response.user.email, &base.ui);
 
     Ok(())
 }
@@ -110,7 +91,28 @@ fn print_cli_authorized(user: &str, ui: &UI) {
     );
 }
 
-async fn fetch_new_token(base: &mut CommandBase) -> Result<()> {
+pub async fn login(base: &mut CommandBase) -> Result<()> {
+    let user_config = base.user_config()?;
+    // If we've already had the user log in, check to see if
+    // the token we found is still valid.
+    //
+    // If the token we found is not valid, go through the process to get
+    // a new token issued.
+    if let Some(token) = user_config.token() {
+        // Try to fetch the user with the token we found to see if we get a good
+        // response back.
+        // TODO: Write response to disk close to / related to token.
+        match base.api_client()?.get_user(token).await {
+            Ok(response) => {
+                let ui = &base.ui;
+                println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
+                print_cli_authorized(&response.user.email, ui);
+                return Ok(());
+            }
+            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
+        };
+    }
+
     let repo_config = base.repo_config()?;
     let redirect_url = format!("http://{DEFAULT_HOST_NAME}:{DEFAULT_PORT}");
     let login_url_configuration = repo_config.login_url();
@@ -145,39 +147,13 @@ async fn fetch_new_token(base: &mut CommandBase) -> Result<()> {
         .get()
         .ok_or_else(|| anyhow!("Failed to get token"))?;
 
-    let client = base.api_client()?;
-    let user_response = client.get_user(token.as_str()).await?;
-    let ui = &base.ui;
-    print_cli_authorized(&user_response.user.email, ui);
-
     base.user_config_mut()?.set_token(Some(token.to_string()))?;
 
+    let client = base.api_client()?;
+    let user_response = client.get_user(token.as_str()).await?;
+    print_cli_authorized(&user_response.user.email, &base.ui);
+
     Ok(())
-}
-
-pub async fn login(base: &mut CommandBase) -> Result<()> {
-    // If we've already had the user log in, check to see if
-    // the token we found is still valid.
-    //
-    // If the token we found is not valid, go through the process to get
-    // a new token issued.
-    let user_config = base.user_config()?;
-    if let Some(token) = user_config.token() {
-        // Try to fetch the user with the token we found to see if we get a good
-        // response back.
-        // TODO: Fetch teams for user and write to disk close to token location.
-        match base.api_client()?.get_user(token).await {
-            Ok(response) => {
-                let ui = &base.ui;
-                println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
-                print_cli_authorized(&response.user.email, ui);
-                return Ok(());
-            }
-            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
-        };
-    }
-
-    fetch_new_token(base).await
 }
 
 #[cfg(test)]
