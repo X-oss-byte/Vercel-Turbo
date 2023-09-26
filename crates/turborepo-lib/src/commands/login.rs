@@ -23,15 +23,19 @@ pub async fn sso_login(base: &mut CommandBase, sso_team: &str) -> Result<()> {
         // Try to fetch the user with the token we found to see if we get a good
         // response back.
         // TODO: Write response to disk close to / related to token.
-        match base.api_client()?.get_user(token).await {
-            Ok(response) => {
+        if let Ok(response) = base.api_client()?.get_user(token).await {
+            let teams_response = base.api_client()?.get_teams(token).await?;
+            if teams_response
+                .teams
+                .iter()
+                .any(|team| team.slug == sso_team)
+            {
                 let ui = &base.ui;
                 println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
                 print_cli_authorized(&response.user.email, ui);
                 return Ok(());
             }
-            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
-        };
+        }
     }
 
     let repo_config = base.repo_config()?;
@@ -117,14 +121,11 @@ pub async fn login(base: &mut CommandBase) -> Result<()> {
         // Try to fetch the user with the token we found to see if we get a good
         // response back.
         // TODO: Write response to disk close to / related to token.
-        match base.api_client()?.get_user(token).await {
-            Ok(response) => {
-                let ui = &base.ui;
-                println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
-                print_cli_authorized(&response.user.email, ui);
-                return Ok(());
-            }
-            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
+        if let Ok(response) = base.api_client()?.get_user(token).await {
+            let ui = &base.ui;
+            println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
+            print_cli_authorized(&response.user.email, ui);
+            return Ok(());
         };
     }
 
