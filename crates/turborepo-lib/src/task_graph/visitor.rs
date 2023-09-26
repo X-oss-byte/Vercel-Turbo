@@ -1,22 +1,32 @@
 use std::{
     borrow::Cow,
     io::Write,
+    process::Stdio,
     sync::{Arc, OnceLock},
+    time::Duration,
 };
 
 use console::{Style, StyledObject};
 use futures::{stream::FuturesUnordered, StreamExt};
 use regex::Regex;
-use tokio::sync::mpsc;
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    process::Command,
+    sync::mpsc,
+};
 use tracing::{debug, error};
+use turbopath::AbsoluteSystemPath;
 use turborepo_env::{EnvironmentVariableMap, ResolvedEnvMode};
-use turborepo_ui::{ColorSelector, OutputClient, OutputSink, OutputWriter, PrefixedUI, UI};
+use turborepo_ui::{
+    ColorSelector, OutputClient, OutputSink, OutputWriter, PrefixedUI, PrefixedWriter, UI,
+};
 
 use crate::{
     cli::EnvMode,
     engine::{Engine, ExecutionOptions},
     opts::Opts,
     package_graph::{PackageGraph, WorkspaceName},
+    process::ProcessManager,
     run::{
         task_id::{self, TaskId},
         RunCache,
@@ -34,6 +44,8 @@ pub struct Visitor<'a> {
     sink: OutputSink<StdWriter>,
     color_cache: ColorSelector,
     ui: UI,
+    manager: ProcessManager,
+    repo_root: &'a AbsoluteSystemPath,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -70,6 +82,8 @@ impl<'a> Visitor<'a> {
         global_env_mode: EnvMode,
         ui: UI,
         silent: bool,
+        manager: ProcessManager,
+        repo_root: &'a AbsoluteSystemPath,
     ) -> Self {
         let task_hasher = TaskHasher::new(
             package_inputs_hashes,
@@ -89,6 +103,8 @@ impl<'a> Visitor<'a> {
             sink,
             color_cache,
             ui,
+            manager,
+            repo_root,
         }
     }
 
@@ -183,12 +199,55 @@ impl<'a> Visitor<'a> {
             let prefix = self.prefix(&info);
             let pretty_prefix = self.color_cache.prefix_with_color(&task_hash, &prefix);
             let ui = self.ui;
+            let manager = self.manager.clone();
+            let package_manager = self.package_graph.package_manager().clone();
+            let workspace_directory = self.repo_root.resolve(workspace_dir);
 
             tasks.push(tokio::spawn(async move {
+                let task_id = info;
                 let _task_cache = task_cache;
                 let mut prefixed_ui =
-                    Self::prefixed_ui(ui, is_github_actions, &output_client, pretty_prefix);
+                    Self::prefixed_ui(ui, is_github_actions, &output_client, pretty_prefix.clone());
                 prefixed_ui.output(command);
+
+                let mut cmd = Command::new(package_manager.to_string());
+                cmd.args(["run", task_id.task()]);
+                cmd.current_dir(workspace_directory.as_path());
+                cmd.stdout(Stdio::piped());
+                cmd.stderr(Stdio::piped());
+
+                // TODO: avoid passing Duration::MAX and instead allow processes to run without
+                // a timeout
+                let mut process = match manager.spawn(cmd, Duration::MAX) {
+                    Some(Ok(child)) => child,
+                    // Turbo was unable to spawn a process
+                    Some(Err(e)) => {
+                        // Note: we actually failed to spawn, but this matches the Go output
+                        prefixed_ui.error("command finished with error: {e}");
+                        callback.send(Ok(())).unwrap();
+                        return;
+                    }
+                    // Turbo is shutting down
+                    None => {
+                        callback.send(Ok(())).unwrap();
+                        return;
+                    }
+                };
+
+                let exit_code = match process
+                    .wait_with_piped_outputs(
+                        PrefixedWriter::new(ui, pretty_prefix.clone(), output_client.stdout()),
+                        PrefixedWriter::new(ui, pretty_prefix.clone(), output_client.stderr()),
+                    )
+                    .await
+                {
+                    Err(e) => {
+                        error!("unable to pipe outputs from command: {e}");
+                        None
+                    }
+                    Ok(exit) => exit,
+                };
+
                 callback.send(Ok(())).unwrap();
             }));
         }

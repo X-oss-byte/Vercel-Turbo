@@ -266,6 +266,8 @@ impl<'a> Run<'a> {
             global_env_mode,
             self.base.ui,
             false,
+            self.processes.clone(),
+            &self.base.repo_root,
         );
 
         visitor.visit(engine.clone()).await?;
