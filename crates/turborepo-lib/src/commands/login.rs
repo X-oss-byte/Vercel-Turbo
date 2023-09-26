@@ -19,6 +19,21 @@ const DEFAULT_PORT: u16 = 9789;
 const DEFAULT_SSO_PROVIDER: &str = "SAML/OIDC Single Sign-On";
 
 pub async fn sso_login(base: &mut CommandBase, sso_team: &str) -> Result<()> {
+    if let Some(token) = base.user_config()?.token() {
+        // Try to fetch the user with the token we found to see if we get a good
+        // response back.
+        // TODO: Write response to disk close to / related to token.
+        match base.api_client()?.get_user(token).await {
+            Ok(response) => {
+                let ui = &base.ui;
+                println!("{}", ui.apply(BOLD.apply_to("Existing token found!")));
+                print_cli_authorized(&response.user.email, ui);
+                return Ok(());
+            }
+            Err(_) => {} // An error here means we got a bad response - assume we need a new token.
+        };
+    }
+
     let repo_config = base.repo_config()?;
     let redirect_url = format!("http://{DEFAULT_HOST_NAME}:{DEFAULT_PORT}");
     let login_url_configuration = repo_config.login_url();
@@ -350,14 +365,23 @@ mod test {
             version: "",
         };
 
-        login::login(&mut base).await.unwrap();
+        // Attempt first login to get new token.
+        let first_token = {
+            login::login(&mut base).await.unwrap();
+            base.user_config().unwrap().token().unwrap().to_string()
+        };
+
+        let second_token = {
+            login::login(&mut base).await.unwrap();
+            base.user_config().unwrap().token().unwrap().to_string()
+        };
 
         handle.abort();
 
-        assert_eq!(
-            base.user_config().unwrap().token().unwrap(),
-            turborepo_vercel_api_mock::EXPECTED_TOKEN
-        );
+        // Save token we just got. Run the login again to make sure the token we got
+        // doesn't change.
+        assert_eq!(first_token, turborepo_vercel_api_mock::EXPECTED_TOKEN);
+        assert_eq!(first_token, second_token);
     }
 
     #[derive(Debug, Clone, Deserialize)]
@@ -403,16 +427,24 @@ mod test {
             version: "",
         };
 
-        login::sso_login(&mut base, turborepo_vercel_api_mock::EXPECTED_SSO_TEAM_SLUG)
-            .await
-            .unwrap();
+        let first_token = {
+            login::sso_login(&mut base, turborepo_vercel_api_mock::EXPECTED_SSO_TEAM_SLUG)
+                .await
+                .unwrap();
+            base.user_config().unwrap().token().unwrap().to_string()
+        };
+
+        let second_token = {
+            login::sso_login(&mut base, turborepo_vercel_api_mock::EXPECTED_SSO_TEAM_SLUG)
+                .await
+                .unwrap();
+            base.user_config().unwrap().token().unwrap().to_string()
+        };
 
         handle.abort();
 
-        assert_eq!(
-            base.user_config().unwrap().token().unwrap(),
-            turborepo_vercel_api_mock::EXPECTED_TOKEN
-        );
+        assert_eq!(first_token, turborepo_vercel_api_mock::EXPECTED_TOKEN);
+        assert_eq!(first_token, second_token);
     }
 
     #[test]
