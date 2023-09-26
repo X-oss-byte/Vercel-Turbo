@@ -80,7 +80,7 @@ impl<'a> EngineBuilder<'a> {
     pub fn with_root_tasks<I: IntoIterator<Item = TaskName<'static>>>(mut self, tasks: I) -> Self {
         self.root_enabled_tasks = tasks
             .into_iter()
-            .filter(|name| name.package() == Some(ROOT_PKG_NAME))
+            .filter(|name| name.package() == Some(ROOT_PKG_NAME) || name.package().is_none())
             .map(|name| name.into_non_workspace_task())
             .collect();
         self

@@ -376,7 +376,11 @@ impl<'a> Run<'a> {
 
             if filtered_pkgs.len() != pkg_dep_graph.len() {
                 for target in self.targets() {
-                    let task_name = TaskName::from(target.as_str());
+                    let task_name = TaskName {
+                        package: Some(ROOT_PKG_NAME.into()),
+                        task: target.into(),
+                    };
+
                     if root_turbo_json.pipeline.contains_key(&task_name) {
                         filtered_pkgs.insert(WorkspaceName::Root);
                         break;
