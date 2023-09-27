@@ -20,8 +20,8 @@ pub struct TaskId<'a> {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 #[serde(try_from = "String", into = "String")]
 pub struct TaskName<'a> {
-    pub(crate) package: Option<Cow<'a, str>>,
-    pub(crate) task: Cow<'a, str>,
+    package: Option<Cow<'a, str>>,
+    task: Cow<'a, str>,
 }
 
 #[derive(Debug, thiserror::Error)]
