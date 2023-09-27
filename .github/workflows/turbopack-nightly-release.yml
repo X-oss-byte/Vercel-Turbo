@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Get latest commit that passes CI
-        uses: talentpair/last-green-commit-action@d95cfa836b22ef047dd0a8ddb1e6d9567982d702
+        uses: talentpair/last-green-commit-action@bd55a9795105877107ab9fcb0368b3052662ea8f
         id: green_commit
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
