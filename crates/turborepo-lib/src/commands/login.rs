@@ -23,8 +23,15 @@ pub async fn sso_login(base: &mut CommandBase, sso_team: &str) -> Result<()> {
         // Try to fetch the user with the token we found to see if we get a good
         // response back.
         // TODO: Write response to disk close to / related to token.
-        if let Ok(response) = base.api_client()?.get_user(token).await {
-            let teams_response = base.api_client()?.get_teams(token).await?;
+
+        // Get two clients to concurrently fetch the user and the teams for the token.
+        let api_client1 = base.api_client()?;
+        let api_client2 = base.api_client()?;
+
+        let (user_result, teams_result) =
+            tokio::join!(api_client1.get_user(token), api_client2.get_teams(token));
+
+        if let (Ok(response), Ok(teams_response)) = (user_result, teams_result) {
             if teams_response
                 .teams
                 .iter()
@@ -111,13 +118,12 @@ fn print_cli_authorized(user: &str, ui: &UI) {
 }
 
 pub async fn login(base: &mut CommandBase) -> Result<()> {
-    let user_config = base.user_config()?;
     // If we've already had the user log in, check to see if
     // the token we found is still valid.
     //
     // If the token we found is not valid, go through the process to get
     // a new token issued.
-    if let Some(token) = user_config.token() {
+    if let Some(token) = base.user_config()?.token() {
         // Try to fetch the user with the token we found to see if we get a good
         // response back.
         // TODO: Write response to disk close to / related to token.
@@ -366,7 +372,8 @@ mod test {
             version: "",
         };
 
-        // Attempt first login to get new token.
+        // TODO: Determine a better test for these tokens. This is meant to tell if we
+        // generated a new token if one already exists.
         let first_token = {
             login::login(&mut base).await.unwrap();
             base.user_config().unwrap().token().unwrap().to_string()
@@ -428,6 +435,8 @@ mod test {
             version: "",
         };
 
+        // TODO: Determine a better test for these tokens. This is meant to tell if we
+        // generated a new token if one already exists.
         let first_token = {
             login::sso_login(&mut base, turborepo_vercel_api_mock::EXPECTED_SSO_TEAM_SLUG)
                 .await
@@ -441,7 +450,6 @@ mod test {
                 .unwrap();
             base.user_config().unwrap().token().unwrap().to_string()
         };
-
         handle.abort();
 
         assert_eq!(first_token, turborepo_vercel_api_mock::EXPECTED_TOKEN);
