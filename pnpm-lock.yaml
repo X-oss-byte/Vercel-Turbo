@@ -365,7 +365,7 @@ importers:
       '@types/node': ^16.11.12
       eslint: '>6.6.0'
       jest: ^27.4.3
-      json5: ^2.2.1
+      json5: ^2.2.2
       ts-jest: ^27.1.1
       tsconfig: workspace:*
       tsup: ^6.2.0
@@ -381,7 +381,7 @@ importers:
       '@types/jest': 27.5.2
       '@types/node': 16.11.44
       jest: 27.5.1
-      json5: 2.2.1
+      json5: 2.2.3
       ts-jest: 27.1.5_vwbkq6iekkdgzr33wjcnr3wuaq
       tsconfig: link:../tsconfig
       tsup: 6.2.3_typescript@4.7.4
@@ -501,7 +501,7 @@ importers:
       fs-extra: ^11.1.0
       jest: ^27.4.3
       js-yaml: ^4.1.0
-      json5: ^2.2.3
+      json5: ^2.2.2
       ts-jest: ^27.1.1
       tsconfig: workspace:*
       typescript: ^4.7.4
@@ -570,7 +570,7 @@ importers:
       fast-glob: ^3.2.12
       jest: ^27.4.3
       js-yaml: ^4.1.0
-      json5: ^2.2.3
+      json5: ^2.2.2
       ts-jest: ^27.1.1
       tsconfig: workspace:*
       tsup: ^5.12.1
@@ -8366,12 +8366,6 @@ packages:
     hasBin: true
     dependencies:
       minimist: 1.2.7
-    dev: true
-
-  /json5/2.2.1:
-    resolution: {integrity: sha512-1hqLFMSrGHRHxav9q9gNjJ5EXznIxGVO09xQRrwplcS8qs28pZ8s8hupZAmqDwZUmVZ2Qb2jnyPOWcDH8m8dlA==}
-    engines: {node: '>=6'}
-    hasBin: true
     dev: true
 
   /json5/2.2.3:
