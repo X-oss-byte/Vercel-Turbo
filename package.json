@@ -52,7 +52,7 @@
   },
   "pnpm": {
     "overrides": {
-      "next@latest": "13.0.6"
+      "next@latest": "15.5.13"
     }
   },
   "packageManager": "pnpm@7.18.2"
