@@ -125,7 +125,7 @@ jobs:
           mv rust-artifacts/turbo-x86_64-pc-windows-gnu cli/dist-windows-amd64
 
       - name: Download Go artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           github_token: ${{secrets.TURBOBOT}}
           workflow: turborepo-release-step-2.yml
