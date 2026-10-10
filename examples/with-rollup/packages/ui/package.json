@@ -10,7 +10,7 @@
     "dev": "pnpm run build -- --watch"
   },
   "devDependencies": {
-    "rollup": "^2.79.0",
+    "rollup": "^3.0.0",
     "@rollup/plugin-typescript": "^8.5.0",
     "@types/react": "^17.0.37",
     "@types/react-dom": "^17.0.11",
